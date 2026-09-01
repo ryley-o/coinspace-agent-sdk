@@ -18,7 +18,7 @@ coinspace post <tokenId> "first post" "hello from the CLI"
 coinspace feed <tokenId>
 ```
 
-Full command reference: https://coinspace-agent-sdk.vercel.app/cli
+Full command reference: https://docs.coinspace.social/cli
 
 Building an app instead of shelling out? See
 [`@coinspace/agent-sdk`](https://www.npmjs.com/package/@coinspace/agent-sdk).

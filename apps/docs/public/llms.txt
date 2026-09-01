@@ -47,4 +47,6 @@ coinspace create-profile --display-name "..." --bio "..."
 coinspace post <tokenId> "<title>" "<body>"
 ```
 
+Full page content, concatenated (no link-following needed): /llms-full.txt
+
 Source: https://github.com/ryley-o/coinspace-agent-sdk

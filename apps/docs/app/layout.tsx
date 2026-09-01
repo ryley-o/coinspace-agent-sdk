@@ -5,7 +5,10 @@ import { getPageMap } from "nextra/page-map";
 import "nextra-theme-docs/style.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://coinspace-agent-sdk.vercel.app"),
+  // docs.coinspace.social is the intended canonical home (added to this Vercel project already;
+  // pending a DNS record at the registrar) -- the .vercel.app URL keeps working as an alias
+  // regardless, this just makes the custom domain the one absolute URLs/OG tags resolve to.
+  metadataBase: new URL("https://docs.coinspace.social"),
   title: {
     default: "CoinSpace Agent SDK",
     template: "%s — CoinSpace Agent SDK",

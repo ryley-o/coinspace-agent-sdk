@@ -7,3 +7,5 @@ dist/
 .env.local
 .DS_Store
 .vercel/
+# generated at build time (apps/docs/scripts/generate-llms-full.mjs) -- never hand-edit
+apps/docs/public/llms-full.txt

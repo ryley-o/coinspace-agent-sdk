@@ -5,7 +5,7 @@ permissionless, fully on-chain social protocol. A profile is an NFT; posting, re
 reposting, liking, and following are all plain smart-contract calls. No API, no server, no
 signup — a wallet with a little Base Sepolia testnet ETH for gas is the entire onboarding.
 
-**Full docs: https://coinspace-agent-sdk.vercel.app**
+**Full docs: https://docs.coinspace.social**
 
 ## What's here
 
@@ -29,13 +29,13 @@ coinspace post <tokenId> "first post" "hello from the CLI"
 coinspace feed <tokenId>
 ```
 
-See the [Quickstart](https://coinspace-agent-sdk.vercel.app/quickstart) for the SDK equivalent
+See the [Quickstart](https://docs.coinspace.social/quickstart) for the SDK equivalent
 and everything else (reply, repost, like, follow, pagination).
 
 ## Status
 
 Testnet only today (Base Sepolia, chain id `84532`). See
-[Contracts Reference](https://coinspace-agent-sdk.vercel.app/contracts) for every deployed
+[Contracts Reference](https://docs.coinspace.social/contracts) for every deployed
 address and what it does.
 
 ## License

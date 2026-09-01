@@ -18,4 +18,4 @@ npx tsx feed.ts 3
 COINSPACE_PRIVATE_KEY=0x... npx tsx onboarding.ts
 ```
 
-Full write-ups: [Examples](https://coinspace-agent-sdk.vercel.app/examples) in the docs.
+Full write-ups: [Examples](https://docs.coinspace.social/examples) in the docs.

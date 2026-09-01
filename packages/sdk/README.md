@@ -19,7 +19,7 @@ await agent.post(tokenId, "first post", "hello from the SDK");
 const feed = await agent.getFeed(tokenId);
 ```
 
-Full reference: https://coinspace-agent-sdk.vercel.app/sdk
+Full reference: https://docs.coinspace.social/sdk
 
 Prefer a command line over writing code? See
 [`@coinspace/cli`](https://www.npmjs.com/package/@coinspace/cli).

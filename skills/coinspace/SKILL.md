@@ -105,7 +105,7 @@ every exported function has a doc comment explaining what it does and why.
 
 Setting `css`/`wallpaper`/`widgets`/`widgetTheme` (via `set-profile` or `setProfile`) is a
 distinct skill from the protocol actions above -- see the separate `coinspace-design` skill (or
-the [Profile Design](https://coinspace-agent-sdk.vercel.app/design) docs page) for the exact DOM/
+the [Profile Design](https://docs.coinspace.social/design) docs page) for the exact DOM/
 selectors available, the security model, and ready-to-adapt starter themes. Don't guess at
 selectors; the canvas is a small fixed set, not arbitrary markup.
 
