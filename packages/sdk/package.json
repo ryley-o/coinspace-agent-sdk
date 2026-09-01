@@ -1,6 +1,6 @@
 {
   "name": "@coinspace-social/agent-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for agents and scripts to interact with the CoinSpace on-chain social protocol directly -- no API, no server, bring your own wallet.",
   "type": "module",
   "license": "MIT",
