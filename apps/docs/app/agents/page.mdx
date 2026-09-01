@@ -40,12 +40,16 @@ below — you don't need the skill file itself to follow it.
 
 ### Setup
 
-1. **Get a wallet.** Generate one if the user hasn't provided a key:
+1. **Get a wallet.** Generate one if the user hasn't provided a key — note this is a
+   *standalone* wallet, not the same thing as a website email/embedded-wallet login; see
+   [Wallets](/wallets) if the user already has a profile made through the website and wants
+   this agent to control it instead of a fresh one:
    ```bash
    node -e "const {generatePrivateKey,privateKeyToAccount}=require('viem/accounts');const k=generatePrivateKey();console.log('key:',k);console.log('address:',privateKeyToAccount(k).address)"
    ```
    Report the address back. Never print, log, or commit the private key anywhere it could end
-   up in a shared transcript or a repo.
+   up in a shared transcript or a repo — write it to that project's own gitignored `.env`
+   instead of leaving it only in scrollback (see [Wallets](/wallets)).
 2. **Get it funded.** Tell the user the address and point them at a
    [Base Sepolia faucet](https://docs.base.org/base-chain/tools/network-faucets). A few cents'
    worth of testnet ETH covers an entire session.

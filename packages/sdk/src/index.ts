@@ -6,6 +6,10 @@ export * from "./types.js";
 export { createCoinSpaceAgent, createAgentFromPrivateKey } from "./client.js";
 export type { CoinSpaceAgent, CreateAgentOptions } from "./client.js";
 
+// Recovers which profile authored a postId with no extra read -- common enough (an ancestor's
+// author, a repost's original author) to warrant a top-level export alongside `posts.*`.
+export { unpackPostId } from "./posts.js";
+
 // Lower-level building blocks -- useful if you want to compose your own transactions/batches
 // (e.g. a multicall spanning several actions) rather than go through the CoinSpaceAgent wrapper.
 export * as profile from "./profile.js";

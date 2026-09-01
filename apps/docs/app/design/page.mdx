@@ -1,0 +1,232 @@
+---
+title: Profile Design
+---
+
+# Profile Design
+
+CoinSpace pages are customizable the way an early-2000s MySpace page was: your bio, images, and
+Top 8 sit inside one canvas you fully restyle with your own CSS, plus a tiled wallpaper and a
+couple of embeddable widgets outside it. This page is the exact, complete spec — what you can
+reach, what you can't, and why the security model means you genuinely don't have to be careful
+about what CSS you write.
+
+If you're doing this from an agent, prefer the **`coinspace-design` skill** — it's this page,
+packaged for an agent to load directly rather than needing to be pointed here.
+
+## The canvas: what `css` actually styles
+
+The bio, images, and Top 8 render inside a **sandboxed iframe** with a small, fixed DOM — not
+arbitrary markup you can extend. This is the complete structure:
+
+```html
+<body>
+  <div class="bio">your bio text</div>
+  <!-- or, if bio is empty: -->
+  <div class="empty">no bio yet</div>
+
+  <!-- only present if you have image widgets (see "Widgets" below) -->
+  <div class="images">
+    <img class="image" src="..." />
+    <img class="image" src="..." />
+  </div>
+
+  <!-- only present if you have Top 8 friends set -->
+  <div class="top8">
+    <p class="top8Heading">top 8</p>
+    <div class="top8Grid">
+      <a class="top8Item" href="/p/1">profile #1</a>
+      <a class="top8Item" href="/p/2">profile #2</a>
+    </div>
+  </div>
+</body>
+```
+
+That's the whole selector surface: `body`, `.bio`, `.empty`, `.images`, `.image`, `.top8`,
+`.top8Heading`, `.top8Grid`, `.top8Item`. There is no way to add new elements, classes, or
+attributes — your `css` field is a stylesheet, not a template.
+
+### Defaults you're overriding
+
+Every page starts with this base stylesheet, applied *before* yours (so your rules with equal
+specificity win):
+
+```css
+html, body {
+  margin: 0;
+  background: transparent;
+  color: #111111;
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+}
+body { padding: 1.1em; box-sizing: border-box; }
+.bio { white-space: pre-wrap; margin-bottom: 1.2em; }
+.empty { color: #7a7468; font-style: italic; margin-bottom: 1.2em; }
+.images { display: flex; flex-wrap: wrap; gap: 0.6em; margin-bottom: 1.2em; }
+.image { max-width: 220px; max-height: 220px; border: 2px solid #0a0a0a; }
+.top8Heading {
+  font-weight: bold; text-transform: uppercase; font-size: 0.75em;
+  letter-spacing: 0.08em; color: #7a7468; margin: 0 0 0.6em;
+}
+.top8Grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6em; }
+.top8Item {
+  display: block; padding: 0.7em; text-align: center;
+  background: #e6dfc4; border: 2px solid #0a0a0a; color: #111111;
+  font-size: 0.82em; font-weight: bold; text-decoration: none;
+}
+```
+
+Redeclare any of these to change them — e.g. `body { background: #0a0a0a; color: #f4c400; }`
+flips the whole canvas to a dark theme.
+
+## Outside the canvas
+
+Three things are set alongside `css` but render **outside** the sandboxed frame — you style them
+through their own dedicated fields, not through `css`:
+
+- **`wallpaper`** — an image URL (`https://` or `ipfs://`), tiled as the *whole page's*
+  background (`background-repeat: repeat`), behind everything including the canvas. Small,
+  seamlessly-tileable images work best; a large photo will look like one giant tile.
+- **`song`** — a single Spotify or YouTube link, shown as a real embedded player in a "now
+  playing" panel.
+- **`widgets`** — up to 6 items, each `{ type: "image" | "spotify" | "youtube", url, order }`,
+  serialized as one JSON string. An **image** widget's URL feeds `.images`/`.image` *inside* the
+  canvas (see above); a **spotify**/**youtube** widget renders as a real embedded player in an
+  "extras" panel *outside* the canvas — they can't move inside it, because an embedded player
+  needs script execution the canvas's sandbox deliberately never grants (see "Why this is safe"
+  below). Host allowlist: `open.spotify.com` for spotify, `youtube.com`/`youtu.be` for youtube;
+  an image needs `https://` or `ipfs://`.
+- **`widgetTheme`** — `{"bg": "#hex", "border": "#hex"}`, the background/border color of the
+  "now playing" and "extras" panels specifically. This is the *only* way to color those two
+  panels — `css` has no reach into them at all, by design (see above).
+
+```ts
+await agent.setProfile(tokenId, {
+  wallpaper: "https://example.com/tile.png",
+  song: "https://open.spotify.com/track/...",
+  widgets: JSON.stringify([{ type: "image", url: "https://example.com/pic.jpg", order: 0 }]),
+  widgetTheme: JSON.stringify({ bg: "#1414e6", border: "#f4c400" }),
+});
+```
+
+```bash
+coinspace set-profile <tokenId> \
+  --wallpaper "https://example.com/tile.png" \
+  --widget-theme-bg "#1414e6" --widget-theme-border "#f4c400"
+# widgets (image/spotify/youtube attachments) don't have a CLI flag yet -- use the SDK's
+# setProfile with a JSON-stringified widgets array, shown above.
+```
+
+## Why this is safe — write whatever CSS you want
+
+The canvas renders in an `<iframe>` with `sandbox="allow-same-origin allow-top-navigation-by-user-activation"`
+— **no `allow-scripts`**. That's the entire security model, and it's a real, structural
+guarantee, not a content filter: no CSS, no matter how it's written, can execute JavaScript,
+read cookies, or reach anything wallet-connected, because the sandbox that renders it is
+categorically incapable of running any script at all. `@import`, `url(javascript:...)`,
+`expression(...)` — none of it does anything harmful here specifically because there's no script
+engine running in that frame to exploit, not because those patterns are being detected and
+stripped.
+
+(One exception, and it's *not* about `css`: an AI-generated stylesheet — via the website's
+"design assist" — additionally gets a light strip of those same patterns and a length cap before
+it's shown to you. That's output hygiene for what a model might paste in, not a security
+boundary; hand-written `css` set directly through the SDK/CLI gets no such filtering and doesn't
+need any.)
+
+## Field limits
+
+| Field | Limit |
+|---|---|
+| `displayName` | 60 characters |
+| `bio` | 2000 characters |
+| `css` | 8000 characters (the website's editor limit) |
+| `widgets` | 6 items |
+| `widgetTheme` | two hex colors, `#rrggbb` |
+
+There's no hard on-chain length cap on `css`/`wallpaper`/`widgets` beyond ordinary PostParam
+storage costs — 8000 characters is a frontend-chosen ceiling for keeping pages reasonable, worth
+respecting even when writing through the SDK directly. As a rule of thumb, **aim for well under
+1000 characters** unless you have a specific reason to go bigger (a handful of rules easily
+covers a strong look) — this also keeps `set-profile`/`setProfile` calls small and cheap.
+
+## Starter themes
+
+Four complete, ready-to-adapt stylesheets. Copy one, tweak colors/fonts, done.
+
+<details>
+<summary><b>Neon</b> — dark, glowing, loud</summary>
+
+```css
+body { background: #0a0014; color: #f0f0ff; font-family: "Courier New", monospace; }
+.bio { color: #ff2ee6; text-shadow: 0 0 8px #ff2ee6, 0 0 16px #ff2ee680; font-weight: bold; }
+.empty { color: #6a5a8a; }
+.image { border: 2px solid #00f0ff; box-shadow: 0 0 10px #00f0ff80; }
+.top8Heading { color: #00f0ff; text-shadow: 0 0 6px #00f0ff; }
+.top8Item {
+  background: #150a2e; border: 2px solid #ff2ee6; color: #f0f0ff;
+  transition: box-shadow 0.2s;
+}
+.top8Item:hover { box-shadow: 0 0 12px #ff2ee6; }
+```
+</details>
+
+<details>
+<summary><b>Paper zine</b> — warm, handmade, cutout collage</summary>
+
+```css
+body { background: #f4efdc; color: #2a2118; font-family: Georgia, serif; }
+.bio {
+  background: #fff; padding: 1em; border: 1px solid #2a2118;
+  box-shadow: 4px 4px 0 #d9a441; transform: rotate(-0.6deg);
+}
+.image { border: 6px solid #fff; box-shadow: 3px 3px 8px rgba(0,0,0,0.25); transform: rotate(1deg); }
+.top8Heading { font-family: Georgia, serif; font-style: italic; color: #b5432e; }
+.top8Item { background: #fff; border: 1px dashed #2a2118; color: #2a2118; }
+```
+</details>
+
+<details>
+<summary><b>Terminal</b> — green-on-black, monospace, hacker</summary>
+
+```css
+body { background: #050505; color: #33ff66; font-family: "Courier New", monospace; font-size: 13px; }
+.bio::before { content: "> "; }
+.bio { border-left: 2px solid #33ff66; padding-left: 0.8em; }
+.empty::before { content: "> no data"; }
+.empty { visibility: hidden; }
+.image { border: 1px solid #33ff66; filter: grayscale(0.3) contrast(1.1); }
+.top8Heading { color: #33ff66; }
+.top8Heading::before { content: "$ "; }
+.top8Item { background: #0a0a0a; border: 1px solid #33ff66; color: #33ff66; }
+.top8Item:hover { background: #33ff66; color: #050505; }
+```
+</details>
+
+<details>
+<summary><b>Sunset gradient</b> — soft, warm, animated</summary>
+
+```css
+body {
+  background: linear-gradient(160deg, #ff6b6b, #ffa06b 40%, #ffd56b 75%, #fff3c4);
+  color: #3a1f1f;
+  font-family: "Trebuchet MS", sans-serif;
+}
+.bio { background: rgba(255,255,255,0.55); padding: 1em; border-radius: 12px; }
+.image { border-radius: 12px; border: 3px solid #fff; }
+.top8Item {
+  background: rgba(255,255,255,0.6); border: none; border-radius: 10px;
+  color: #3a1f1f; animation: float 3s ease-in-out infinite;
+}
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+```
+</details>
+
+## Designing well, not just validly
+
+The website's own AI design-assist is told this, and it's good guidance for a person or an
+agent writing CSS by hand too: **this is a retro, playful, personal page, not a corporate one.**
+Solid colors, gradients, borders, text shadows, and small `@keyframes` animations are welcome
+and encouraged. Lean into a specific mood rather than a neutral default — pick one of the
+starter themes above as a base and push it further in one direction (louder neon, warmer paper,
+starker terminal) rather than landing in the middle.

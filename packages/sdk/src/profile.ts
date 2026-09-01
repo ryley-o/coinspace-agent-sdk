@@ -54,8 +54,14 @@ export async function setProfile(
   tokenId: bigint,
   fields: Partial<ProfileParams>,
 ) {
+  // Skips both undefined (not passed) AND empty-string fields -- an empty value is already every
+  // field's default on a fresh mint, and writing "" explicitly reverts on chain (confirmed live:
+  // minting with an empty `avatar` field reverted the follow-up multicall). If you genuinely want
+  // to clear a field that's currently set to something, this SDK doesn't have a way to force that
+  // distinct from "leave it alone" today -- match the main app's own buildSaveParamsTx, which has
+  // the same limitation.
   const calls = Object.entries(fields)
-    .filter((entry): entry is [ProfileField, string] => entry[1] !== undefined)
+    .filter((entry): entry is [ProfileField, string] => !!entry[1])
     .map(([key, value]) => buildSetFieldCall(tokenId, key, value));
   if (calls.length === 0) return;
 

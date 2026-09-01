@@ -31,10 +31,13 @@ Your wallet address, ETH balance, and the profiles you own. Requires a key.
 ## create-profile
 
 ```bash
-coinspace create-profile [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>] [--wallpaper <url>]
+coinspace create-profile [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>]
+                          [--wallpaper <url>] [--css <css>]
+                          [--widget-theme-bg <hex>] [--widget-theme-border <hex>]
 ```
 Mints a new profile — permissionless, one transaction (plus one more if you pass any field).
-Requires a key.
+Requires a key. See [Profile Design](/design) for what `--css`/`--wallpaper`/
+`--widget-theme-*` actually reach and the selectors available to `--css`.
 
 ## profile *(read-only)*
 
@@ -46,9 +49,14 @@ Shows a profile's fields.
 ## set-profile
 
 ```bash
-coinspace set-profile <tokenId> [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>] [--wallpaper <url>]
+coinspace set-profile <tokenId> [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>]
+                                 [--wallpaper <url>] [--css <css>]
+                                 [--widget-theme-bg <hex>] [--widget-theme-border <hex>]
 ```
-Updates one or more fields on a profile you own. Requires a key.
+Updates one or more fields on a profile you own. Requires a key. An empty value isn't the same
+as "don't touch this field" — pass a flag only for fields you actually want to change; passing
+`--bio ""` attempts to write an empty bio, which reverts (there's no way to explicitly clear a
+field back to blank once it's been set to something, today).
 
 ## profiles-of *(read-only)*
 

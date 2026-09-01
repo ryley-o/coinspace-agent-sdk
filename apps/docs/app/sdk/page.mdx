@@ -45,6 +45,10 @@ Mints a new profile (permissionless, no allowlist). Pass `fields` to set them in
 (mint is one transaction; setting fields, if any, is a second one via the ABX token's own
 `multicall`, so every field lands together).
 
+An empty string is treated as "not set" and skipped, not written -- there's currently no way to
+explicitly clear a field back to blank once it holds a real value (matches the website's own
+editor, which has the same limitation). Pass a field only when you actually want to change it.
+
 ```ts
 agent.setProfile(tokenId: bigint, fields: Partial<ProfileParams>): Promise<void>
 agent.getProfile(tokenId: bigint): Promise<Profile>

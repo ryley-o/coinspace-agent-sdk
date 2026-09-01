@@ -58,16 +58,35 @@ function profileFieldOptions(cmd: Command) {
     .option("--bio <text>", "bio")
     .option("--avatar <url>", "avatar image URL (https:// or ipfs://)")
     .option("--song <url>", "a spotify or youtube link")
-    .option("--wallpaper <url>", "wallpaper image URL (https:// or ipfs://)");
+    .option("--wallpaper <url>", "wallpaper image URL, tiled behind the page (https:// or ipfs://)")
+    .option("--css <css>", "custom CSS styling the bio/images/top8 canvas -- see the Profile Design docs")
+    .option("--widget-theme-bg <hex>", "background color for the song/widget panels, e.g. #e6dfc4")
+    .option("--widget-theme-border <hex>", "border color for the song/widget panels, e.g. #0a0a0a");
 }
 
-function fieldsFromOpts(o: { displayName?: string; bio?: string; avatar?: string; song?: string; wallpaper?: string }) {
+interface ProfileFieldOpts {
+  displayName?: string;
+  bio?: string;
+  avatar?: string;
+  song?: string;
+  wallpaper?: string;
+  css?: string;
+  widgetThemeBg?: string;
+  widgetThemeBorder?: string;
+}
+
+function fieldsFromOpts(o: ProfileFieldOpts) {
   const fields: Record<string, string> = {};
   if (o.displayName !== undefined) fields.displayName = o.displayName;
   if (o.bio !== undefined) fields.bio = o.bio;
   if (o.avatar !== undefined) fields.avatar = o.avatar;
   if (o.song !== undefined) fields.song = o.song;
   if (o.wallpaper !== undefined) fields.wallpaper = o.wallpaper;
+  if (o.css !== undefined) fields.css = o.css;
+  // widgetTheme is one PostParam, JSON {bg, border} -- pass either half and the other stays "".
+  if (o.widgetThemeBg !== undefined || o.widgetThemeBorder !== undefined) {
+    fields.widgetTheme = JSON.stringify({ bg: o.widgetThemeBg ?? "", border: o.widgetThemeBorder ?? "" });
+  }
   return fields;
 }
 
