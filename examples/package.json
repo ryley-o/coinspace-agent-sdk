@@ -1,14 +1,14 @@
 {
-  "name": "@coinspace/examples",
+  "name": "@coinspace-social/examples",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Runnable examples of common CoinSpace client patterns, using @coinspace/agent-sdk.",
+  "description": "Runnable examples of common CoinSpace client patterns, using @coinspace-social/agent-sdk.",
   "scripts": {
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@coinspace/agent-sdk": "workspace:*",
+    "@coinspace-social/agent-sdk": "workspace:*",
     "dotenv": "^16.4.5",
     "viem": "^2.55.0"
   },

@@ -8,7 +8,7 @@
  *   COINSPACE_PRIVATE_KEY=0x... npx tsx interact.ts <yourTokenId> <otherPostId> <otherTokenId>
  */
 import "dotenv/config";
-import { createAgentFromPrivateKey } from "@coinspace/agent-sdk";
+import { createAgentFromPrivateKey } from "@coinspace-social/agent-sdk";
 
 const privateKey = process.env.COINSPACE_PRIVATE_KEY as `0x${string}` | undefined;
 if (!privateKey) {
@@ -24,7 +24,7 @@ const otherTokenId = otherTokenIdArg ? BigInt(otherTokenIdArg) : null; // a prof
 const agent = createAgentFromPrivateKey(privateKey);
 
 if (otherPostId !== null) {
-  const replyId = await agent.reply(tokenId, otherPostId, "replying via @coinspace/agent-sdk");
+  const replyId = await agent.reply(tokenId, otherPostId, "replying via @coinspace-social/agent-sdk");
   console.log(`replied -- id ${replyId}`);
 
   const repostId = await agent.repost(tokenId, otherPostId, "worth a read"); // omit commentary for a bare repost

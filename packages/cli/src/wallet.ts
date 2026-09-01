@@ -1,4 +1,4 @@
-import { createAgentFromPrivateKey, type CoinSpaceAgent } from "@coinspace/agent-sdk";
+import { createAgentFromPrivateKey, type CoinSpaceAgent } from "@coinspace-social/agent-sdk";
 import { generatePrivateKey } from "viem/accounts";
 
 interface WalletOptions {

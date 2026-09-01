@@ -18,7 +18,7 @@ need is here and in [`packages/sdk/src/abi.ts`](https://github.com/ryley-o/coins
 | Blog (posts/replies/reposts/likes/pins) | [`0xC07f19b22CA1193a3a62245584A15a8D122f3163`](https://sepolia.basescan.org/address/0xC07f19b22CA1193a3a62245584A15a8D122f3163) |
 | Social (follows/friends) | [`0x63A6a7470EBaCFfF4a2A8B32e586d7030EAdfD71`](https://sepolia.basescan.org/address/0x63A6a7470EBaCFfF4a2A8B32e586d7030EAdfD71) |
 
-Also exported as `CONTRACTS` from `@coinspace/agent-sdk`. There is no mainnet deployment yet —
+Also exported as `CONTRACTS` from `@coinspace-social/agent-sdk`. There is no mainnet deployment yet —
 this is the one address book the protocol runs on today.
 
 ## AbxToken
@@ -96,7 +96,7 @@ reserved as a "no item" sentinel elsewhere). This means any `postId` — a `pare
 read:
 
 ```ts
-import { unpackPostId } from "@coinspace/agent-sdk"; // or posts.unpackPostId
+import { unpackPostId } from "@coinspace-social/agent-sdk"; // or posts.unpackPostId
 const { tokenId, index } = unpackPostId(postId);
 ```
 

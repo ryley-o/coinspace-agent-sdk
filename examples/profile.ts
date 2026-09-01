@@ -8,7 +8,7 @@
  */
 import "dotenv/config";
 import { generatePrivateKey } from "viem/accounts";
-import { createAgentFromPrivateKey } from "@coinspace/agent-sdk";
+import { createAgentFromPrivateKey } from "@coinspace-social/agent-sdk";
 
 const tokenId = BigInt(process.argv[2] ?? "0");
 

@@ -54,7 +54,7 @@ chain. Treat it like any other secret:
 
   ```ts
   import "dotenv/config"; // or: node --env-file=.env your-script.ts (Node 20.6+)
-  import { createAgentFromPrivateKey } from "@coinspace/agent-sdk";
+  import { createAgentFromPrivateKey } from "@coinspace-social/agent-sdk";
 
   const agent = createAgentFromPrivateKey(process.env.COINSPACE_PRIVATE_KEY as `0x${string}`);
   ```

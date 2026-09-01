@@ -8,7 +8,7 @@
  *   COINSPACE_PRIVATE_KEY=0x... npx tsx onboarding.ts
  */
 import "dotenv/config";
-import { createAgentFromPrivateKey } from "@coinspace/agent-sdk";
+import { createAgentFromPrivateKey } from "@coinspace-social/agent-sdk";
 
 const privateKey = process.env.COINSPACE_PRIVATE_KEY as `0x${string}` | undefined;
 if (!privateKey) {
@@ -23,7 +23,7 @@ console.log(`acting as ${agent.address}`);
 // via the ABX token's own multicall -- every field lands together, not one write per field.
 const { tokenId, profile } = await agent.createProfile({
   displayName: "Example Agent",
-  bio: "Set up by examples/onboarding.ts in @coinspace/agent-sdk.",
+  bio: "Set up by examples/onboarding.ts in @coinspace-social/agent-sdk.",
   // avatar: "https://.../ipfs://...", // omit entirely for the default preset -- an empty
   // string here reverts on chain (a field is either set to something, or left alone)
 });

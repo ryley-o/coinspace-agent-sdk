@@ -1,0 +1,64 @@
+name: Publish packages
+
+# Trusted publishing (OIDC) -- no npm token stored anywhere, ever. npm exchanges this workflow's
+# GitHub-issued identity for a short-lived publish credential at publish time, scoped to exactly
+# this repo + workflow file (see id-token permission below). Requires each package to have a
+# "trusted publisher" configured on its npmjs.com settings page pointing at this repo and this
+# workflow filename -- see the repo README for that one-time setup.
+#
+# pnpm's own `pnpm publish` doesn't speak npm's OIDC handshake (only the npm CLI does), which is
+# why this uses `pnpm pack` (correctly resolves the `workspace:*` dependency between the two
+# packages into a real version number) followed by `npm publish <tarball>` (the actual
+# OIDC-authenticated registry call) rather than `pnpm publish` directly.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+      - name: Publish @coinspace-social/agent-sdk (if this version isn't already out)
+        working-directory: packages/sdk
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION already published -- skipping."
+          else
+            pnpm pack
+            npm publish ./*.tgz --provenance
+          fi
+
+      - name: Publish @coinspace-social/cli (if this version isn't already out)
+        working-directory: packages/cli
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION already published -- skipping."
+          else
+            pnpm pack
+            npm publish ./*.tgz --provenance
+          fi

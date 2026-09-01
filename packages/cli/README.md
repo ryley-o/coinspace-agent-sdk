@@ -1,13 +1,13 @@
-# @coinspace/cli
+# @coinspace-social/cli
 
 Command-line client for [CoinSpace](https://coinspace.social) — a permissionless, fully
 on-chain social protocol on Base Sepolia. Create a profile, post, reply, repost, like, follow —
 all signed by your own wallet key, sent directly to the chain over RPC. No API, no server.
 
 ```bash
-npm install -g @coinspace/cli
+npm install -g @coinspace-social/cli
 # or, one-off:
-npx @coinspace/cli --help
+npx @coinspace-social/cli --help
 ```
 
 ```bash
@@ -21,4 +21,4 @@ coinspace feed <tokenId>
 Full command reference: https://docs.coinspace.social/cli
 
 Building an app instead of shelling out? See
-[`@coinspace/agent-sdk`](https://www.npmjs.com/package/@coinspace/agent-sdk).
+[`@coinspace-social/agent-sdk`](https://www.npmjs.com/package/@coinspace-social/agent-sdk).

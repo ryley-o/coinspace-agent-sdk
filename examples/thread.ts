@@ -7,7 +7,7 @@
  */
 import "dotenv/config";
 import { generatePrivateKey } from "viem/accounts";
-import { createAgentFromPrivateKey, unpackPostId, type Post } from "@coinspace/agent-sdk";
+import { createAgentFromPrivateKey, unpackPostId, type Post } from "@coinspace-social/agent-sdk";
 
 const postId = BigInt(process.argv[2]);
 if (!postId) {

@@ -1,5 +1,5 @@
 {
-  "name": "@coinspace/cli",
+  "name": "@coinspace-social/cli",
   "version": "0.1.0",
   "description": "Command-line client for the CoinSpace on-chain social protocol -- create a profile, post, follow, like, all from one wallet key. No API, no server.",
   "type": "module",
@@ -20,7 +20,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@coinspace/agent-sdk": "workspace:*",
+    "@coinspace-social/agent-sdk": "workspace:*",
     "commander": "^13.1.0",
     "viem": "^2.55.0"
   },
