@@ -10,6 +10,7 @@
     "directory": "packages/cli"
   },
   "keywords": ["coinspace", "agent", "onchain", "cli", "base", "ai-agent"],
+  "publishConfig": { "access": "public" },
   "bin": {
     "coinspace": "./dist/index.js"
   },
