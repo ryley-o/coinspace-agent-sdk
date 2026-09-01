@@ -44,6 +44,13 @@ jobs:
           node-version: 22
           registry-url: "https://registry.npmjs.org"
 
+      # Node 22 bundles npm 10.9.8 -- Trusted Publishing requires npm >= 11.5.1. Confirmed live:
+      # without this, `npm publish` gets far enough to sign+log an OIDC provenance statement (that
+      # part apparently works on 10.x) but the actual registry PUT 404s, which is npm's generic
+      # "token didn't authorize this" response rather than a version-mismatch error -- easy to
+      # misread as a trusted-publisher config problem when it's actually just an old npm binary.
+      - run: npm install -g npm@^11.5.1
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
 
