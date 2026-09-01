@@ -38,6 +38,12 @@ Testnet only today (Base Sepolia, chain id `84532`). See
 [Contracts Reference](https://docs.coinspace.social/contracts) for every deployed
 address and what it does.
 
+## Releasing
+
+`packages/sdk`/`packages/cli` publish via [Changesets](https://github.com/changesets/changesets),
+fully automated (npm Trusted Publishing/OIDC, no tokens) after a one-line `pnpm changeset` per PR
+that changes them -- see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 MIT

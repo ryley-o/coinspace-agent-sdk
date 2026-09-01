@@ -1,31 +1,39 @@
 name: Publish packages
 
-# Trusted publishing (OIDC) -- no npm token stored anywhere, ever. npm exchanges this workflow's
-# GitHub-issued identity for a short-lived publish credential at publish time, scoped to exactly
-# this repo + workflow file (see id-token permission below). Requires each package to have a
-# "trusted publisher" configured on its npmjs.com settings page pointing at this repo and this
-# workflow filename -- see the repo README for that one-time setup.
+# Changesets-driven release, via changesets/action@v2 used as a single step -- it's "the
+# equivalent of setting up the select-mode, version, and publish sub-actions" itself: on every
+# push to main, it either (a) opens/updates a "Version Packages" PR if there are pending
+# `.changeset/*.md` files, or (b) runs the publish script if there aren't (i.e. right after that
+# PR was just merged). See CONTRIBUTING.md for the day-to-day "how do I release something" flow.
 #
-# pnpm's own `pnpm publish` doesn't speak npm's OIDC handshake (only the npm CLI does), which is
-# why this uses `pnpm pack` (correctly resolves the `workspace:*` dependency between the two
-# packages into a real version number) followed by `npm publish <tarball>` (the actual
-# OIDC-authenticated registry call) rather than `pnpm publish` directly.
+# The filename matters here beyond convention: npm's Trusted Publishing (OIDC) is bound to this
+# exact repo + this exact workflow filename (configured once on each package's npmjs.com settings
+# page) -- renaming this file would silently break publishing until that's updated to match.
+#
+# publish-script overrides changesets' own built-in publish mechanism (which would otherwise run
+# `npm publish` per package) with scripts/publish-packages.mjs -- see that file for why: OIDC
+# needs the raw `npm` CLI, but the `workspace:*` dependency between these two packages needs
+# `pnpm pack` to resolve correctly first. Neither piece alone is sufficient.
 
 on:
   push:
-    tags:
-      - "v*"
-  workflow_dispatch: {}
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -39,26 +47,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
 
-      - name: Publish @coinspace-social/agent-sdk (if this version isn't already out)
-        working-directory: packages/sdk
-        run: |
-          NAME=$(node -p "require('./package.json').name")
-          VERSION=$(node -p "require('./package.json').version")
-          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "$NAME@$VERSION already published -- skipping."
-          else
-            pnpm pack
-            npm publish ./*.tgz --provenance
-          fi
-
-      - name: Publish @coinspace-social/cli (if this version isn't already out)
-        working-directory: packages/cli
-        run: |
-          NAME=$(node -p "require('./package.json').name")
-          VERSION=$(node -p "require('./package.json').version")
-          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "$NAME@$VERSION already published -- skipping."
-          else
-            pnpm pack
-            npm publish ./*.tgz --provenance
-          fi
+      - name: Version or Publish
+        uses: changesets/action@v2
+        with:
+          version-script: pnpm run version-packages
+          publish-script: pnpm run release
