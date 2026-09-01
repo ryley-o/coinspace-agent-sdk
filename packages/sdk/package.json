@@ -1,0 +1,33 @@
+{
+  "name": "@coinspace/agent-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for agents and scripts to interact with the CoinSpace on-chain social protocol directly -- no API, no server, bring your own wallet.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryley-o/coinspace-agent-sdk",
+    "directory": "packages/sdk"
+  },
+  "keywords": ["coinspace", "agent", "onchain", "viem", "base", "ai-agent", "sdk"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@artblocks/abx-sdk": "0.1.0-alpha.29",
+    "viem": "^2.55.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

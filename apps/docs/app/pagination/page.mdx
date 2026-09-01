@@ -1,0 +1,74 @@
+---
+title: Pagination & Scale
+---
+
+# Pagination & Scale
+
+Every list read on chain — posts, replies, followers, following, friends — is bounded and
+paginated. This page explains exactly how, because the two mechanisms behave differently in a
+way worth understanding before you build something that depends on it.
+
+## Posts and follow lists: true random access
+
+`getPosts(tokenId, offset, limit)` and `getFollowers`/`getFollowing`/`getFriends(tokenId,
+offset, limit)` are backed by a plain array and an array-backed set (Solady's
+`EnumerableSetLib`) respectively — both support direct O(1) indexing. `offset=50, limit=25`
+jumps straight to items 50–75 in **one RPC call**; you never need to have fetched items 0–50
+first.
+
+The one real constraint is a hard-coded on-chain cap of **25 items per call**
+(`MAX_PAGE_SIZE`, in both `CoinSpaceBlog.sol` and `CoinSpaceSocial.sol`). Ask for `limit: 100`
+and it silently clamps to 25. So you can't get a 100-item window in a single call, but you can
+get *any* 25-item window directly — including a deep one — without walking through the pages
+before it.
+
+```ts
+const first = await agent.getPosts(tokenId, 25);
+// jump straight to a deep page -- no dependency on `first`:
+const deep = await agent.getMorePosts(tokenId, 500, 25);
+```
+
+## Replies: a real cursor, walked in order
+
+`getReplies` is ranked by live like count (via `RankedList`, a score-bucketed doubly-linked
+list — see [Contracts Reference](/contracts#reply-ranking)), not insertion order, and it
+reorders continuously as likes/unlikes happen. Its `cursor` has to be the previous page's last
+item id; getting the next page means walking the linked list forward from there. There's no
+"give me whatever's currently at rank 50" primitive, because rank position isn't a stable,
+independently-addressable thing the way "the 50th post ever written" is.
+
+So for replies specifically, reaching page 3 does require having walked pages 1 and 2 first (or
+otherwise already knowing a valid anchor reply id). For a normal "load more" click-through this
+is a non-issue — each call already has the prior page's cursor in hand:
+
+```ts
+let cursor = 0n;
+const all: Post[] = [];
+do {
+  const { replies, nextCursor } = await agent.getReplies(parentId, cursor, 25);
+  all.push(...replies);
+  cursor = nextCursor;
+} while (cursor !== 0n);
+```
+
+It only bites if you wanted parallel prefetching of several reply pages at once, or a stable
+"jump to page 10" control — neither of which this protocol's own app needs, and probably
+neither does yours.
+
+## No hard depth limit, on either kind
+
+`MAX_PAGE_SIZE` only bounds *per-call* size, not total reachable history. You can always keep
+paging arbitrarily far back — through 20 posts or 20,000 — it just costs one more RPC round
+trip per 25 items. Nothing is ever permanently unreachable.
+
+## Cost, at scale
+
+These are all `view` calls — free to the caller, no gas, no blockchain fee, regardless of
+scale. RPC cost per page stays flat whether a profile has 20 posts or 20,000.
+
+On the **write** side — what actually costs gas — `RankedList`'s insert/increment/decrement are
+built to be **worst-case O(1)**, not merely amortized: liking a reply costs the same gas
+whether the thread has 5 replies or 50,000. Appending a post or a follow is a standard
+O(1)-amortized array/set append. Nothing in this protocol gets more expensive to interact with
+as it grows — the only thing that scales with size is "more pages to page through," which is
+exactly what the pagination above is for.

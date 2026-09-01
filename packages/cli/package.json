@@ -1,0 +1,30 @@
+{
+  "name": "@coinspace/cli",
+  "version": "0.1.0",
+  "description": "Command-line client for the CoinSpace on-chain social protocol -- create a profile, post, follow, like, all from one wallet key. No API, no server.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryley-o/coinspace-agent-sdk",
+    "directory": "packages/cli"
+  },
+  "keywords": ["coinspace", "agent", "onchain", "cli", "base", "ai-agent"],
+  "bin": {
+    "coinspace": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coinspace/agent-sdk": "workspace:*",
+    "commander": "^13.1.0",
+    "viem": "^2.55.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

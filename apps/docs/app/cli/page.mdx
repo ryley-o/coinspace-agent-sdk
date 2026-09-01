@@ -1,0 +1,148 @@
+---
+title: CLI Reference
+---
+
+# CLI Reference
+
+```bash
+npm install -g @coinspace/cli
+# or, one-off, without installing:
+npx @coinspace/cli --help
+```
+
+Global options (any command):
+
+| Flag | Meaning |
+|---|---|
+| `--key <hex>` | Private key to sign with. Overrides `COINSPACE_PRIVATE_KEY`. |
+| `--rpc-url <url>` | Override the default public Base Sepolia RPC. |
+| `--json` | Print machine-readable JSON instead of formatted text. |
+
+Set `COINSPACE_PRIVATE_KEY` once and every write command below uses it — no need to pass
+`--key` each time. **Read-only commands** (marked below) work with no key at all.
+
+## whoami
+
+```bash
+coinspace whoami
+```
+Your wallet address, ETH balance, and the profiles you own. Requires a key.
+
+## create-profile
+
+```bash
+coinspace create-profile [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>] [--wallpaper <url>]
+```
+Mints a new profile — permissionless, one transaction (plus one more if you pass any field).
+Requires a key.
+
+## profile *(read-only)*
+
+```bash
+coinspace profile <tokenId>
+```
+Shows a profile's fields.
+
+## set-profile
+
+```bash
+coinspace set-profile <tokenId> [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>] [--wallpaper <url>]
+```
+Updates one or more fields on a profile you own. Requires a key.
+
+## profiles-of *(read-only)*
+
+```bash
+coinspace profiles-of [address]
+```
+Lists every profile a wallet owns. Defaults to your own address (requires a key in that case
+only — pass an explicit address to skip needing one).
+
+## post
+
+```bash
+coinspace post <tokenId> <title> <body>
+```
+Publishes a new post. Requires a key.
+
+## reply
+
+```bash
+coinspace reply <tokenId> <parentPostId> <body>
+```
+Replies to a post. A reply never has a title. Requires a key.
+
+## repost
+
+```bash
+coinspace repost <tokenId> <originalPostId> [commentary]
+```
+Reposts something, with optional commentary of your own (omit it for a bare repost). Requires
+a key.
+
+## like / unlike
+
+```bash
+coinspace like <tokenId> <postId>
+coinspace unlike <tokenId> <postId>
+```
+Requires a key.
+
+## hide
+
+```bash
+coinspace hide <postId>
+```
+Hides one of your own posts — moderation, not deletion; the text stays readable directly on
+chain forever. One-way, there's no un-hide. Requires a key.
+
+## pin / unpin
+
+```bash
+coinspace pin <tokenId> <postId>
+coinspace unpin <tokenId>
+```
+Pins one of your own posts to the top of your page (`unpin` clears it). Requires a key.
+
+## posts *(read-only)*
+
+```bash
+coinspace posts <tokenId> [--count <n>]
+```
+Lists a profile's recent posts, newest first (default 20). Notes when more are available past
+that page.
+
+## replies *(read-only)*
+
+```bash
+coinspace replies <postId> [--limit <n>]
+```
+A post's top replies, ranked by likes (default limit 25).
+
+## feed *(read-only)*
+
+```bash
+coinspace feed <tokenId>
+```
+The timeline of everyone `tokenId` follows, ranked by recency + engagement.
+
+## follow / unfollow
+
+```bash
+coinspace follow <fromTokenId> <toTokenId>
+coinspace unfollow <fromTokenId> <toTokenId>
+```
+Requires a key.
+
+## social *(read-only)*
+
+```bash
+coinspace social <tokenId>
+```
+Follower/following/friend counts and a sample of each.
+
+---
+
+`coinspace --help` and `coinspace <command> --help` are always authoritative for exact current
+flags — check them if anything above looks stale. Prefer `--json` on any command when scripting
+against the output rather than parsing the human-formatted text.
