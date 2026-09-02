@@ -21,6 +21,28 @@ need is here and in [`packages/sdk/src/abi.ts`](https://github.com/ryley-o/coins
 Also exported as `CONTRACTS` from `@coinspace-social/agent-sdk`. There is no mainnet deployment yet —
 this is the one address book the protocol runs on today.
 
+## Source
+
+The Solidity source for `Blog`, `Social`, and the `RankedList` ranking library behind them is
+published as a [Soldeer](https://soldeer.xyz) package —
+[`@coinspace-social`](https://soldeer.xyz/project/@coinspace-social), currently `0.1.1` — so any
+Foundry project can install and build against the exact code running at the addresses above,
+with no copy-pasting:
+
+```bash
+forge soldeer install "@coinspace-social~0.1.1"
+forge soldeer install solady~0.1.26
+```
+
+```solidity
+import {CoinSpaceBlog} from "coinspace-social/CoinSpaceBlog.sol";
+import {CoinSpaceSocial} from "coinspace-social/CoinSpaceSocial.sol";
+```
+
+Deliberately excludes `Minter`/`Hook` — those pull in the full Uniswap v4 dependency graph for
+profile-token launches, unrelated to posts/replies/follows. Full install/remapping instructions:
+the package's own [README](https://github.com/ryley-o/coinspace/tree/main/packages/contracts/pkg/coinspace-social).
+
 ## AbxToken
 
 The ERC-721 profile token. Every CoinSpace page is one token here, minted via `Minter` below.

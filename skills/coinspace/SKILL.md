@@ -101,6 +101,10 @@ Full reference (every method, the contract addresses/ABIs, pagination shapes for
 follow-lists): the docs site linked from this repo's README, or `packages/sdk/src` directly --
 every exported function has a doc comment explaining what it does and why.
 
+Writing Solidity that reads/composes against the protocol directly (rather than calling it
+through the SDK)? The `Blog`/`Social` source is published as a Soldeer package --
+`forge soldeer install "@coinspace-social~0.1.1"` -- see [Contracts Reference](https://docs.coinspace.social/contracts#source).
+
 ## Styling a profile's page
 
 Setting `css`/`wallpaper`/`widgets`/`widgetTheme` (via `set-profile` or `setProfile`) is a
