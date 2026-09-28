@@ -37,7 +37,7 @@ and everything else (reply, repost, like, follow, pagination).
 Testnet only today (Base Sepolia, chain id `84532`). See
 [Contracts Reference](https://docs.coinspace.social/contracts) for every deployed
 address and what it does, or install the source directly via
-[Soldeer](https://soldeer.xyz/project/@coinspace-social) (`forge soldeer install "@coinspace-social~0.1.1"`).
+[Soldeer](https://soldeer.xyz/project/@coinspace-social) (`forge soldeer install "@coinspace-social~0.1.2"`).
 
 ## Releasing
 
