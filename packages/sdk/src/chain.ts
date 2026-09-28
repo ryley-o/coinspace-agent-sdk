@@ -34,15 +34,15 @@ export function baseSepoliaTransport(config?: HttpTransportConfig) {
 export const CONTRACTS = {
   /** ABX's ERC-721 profile token -- every CoinSpace page is one token here. Also where every
    * profile field (displayName, bio, avatar, ...) lives, as ABX PostParams. */
-  abxToken: "0x1D4dE4bE91D2B4A86c634Dde68F8aCbbC7A1eE74",
+  abxToken: "0x0ED2429C90608e385BC3D3f31860D864F7F74127",
   /** Mints a fresh profile (`createProfile()`), permissionless, no allowlist. */
-  minter: "0x9d4661947C17EcD0Dd8C585036E1575C5E72Da84",
+  minter: "0x0Ea994C33c72935AbE1b8D74B28a6DE20e293B57",
   /** Top-8, and the reverse index (`profilesOf`) of every profile a wallet owns. */
-  hook: "0xb700CF46C1E69c71fa6248E567634c6f781dF563",
+  hook: "0x107EA72B12175F7884cB3Ad8E28e2BaCb4563F3E",
   /** Posts, replies, reposts, likes, pins -- CoinSpaceBlog. */
-  blog: "0xC07f19b22CA1193a3a62245584A15a8D122f3163",
+  blog: "0x137802c8b8F879919Fe16845433F0F3064AeE173",
   /** Follows/friends -- CoinSpaceSocial. */
-  social: "0x63A6a7470EBaCFfF4a2A8B32e586d7030EAdfD71",
+  social: "0xf8D5ac98FcFD4450e2B4519a23F6aC533483AdC6",
 } as const;
 
 export type ContractName = keyof typeof CONTRACTS;
