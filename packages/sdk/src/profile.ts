@@ -2,6 +2,7 @@ import { type Address, type PublicClient, encodeTag, seriesCodeAbi } from "@artb
 import { BaseError, ContractFunctionRevertedError, encodeFunctionData, hexToString, parseEventLogs, stringToHex } from "viem";
 import type { ContractAddresses } from "./chain.js";
 import { hookAbi, minterAbi } from "./abi.js";
+import { authLabel } from "./errors.js";
 import type { AgentWalletClient } from "./tx.js";
 import { sendAndWait, type TxCall } from "./tx.js";
 import { PROFILE_FIELDS, type Profile, type ProfileField, type ProfileParams } from "./types.js";
@@ -62,17 +63,48 @@ export async function setProfile(
   // to clear a field that's currently set to something, this SDK doesn't have a way to force that
   // distinct from "leave it alone" today -- match the main app's own buildSaveParamsTx, which has
   // the same limitation.
-  const calls = Object.entries(fields)
-    .filter((entry): entry is [ProfileField, string] => !!entry[1])
-    .map(([key, value]) => buildSetFieldCall(tokenId, key, value));
-  if (calls.length === 0) return;
+  const fieldEntries = Object.entries(fields).filter((entry): entry is [ProfileField, string] => !!entry[1]);
+  if (fieldEntries.length === 0) return;
+  const calls = fieldEntries.map(([key, value]) => buildSetFieldCall(tokenId, key, value));
 
   const tx: TxCall = {
     to: contracts.abxToken,
     data: encodeFunctionData({ abi: seriesCodeAbi, functionName: "multicall", args: [calls] }),
     value: 0n,
   };
-  await sendAndWait(walletClient, publicClient, tx);
+  try {
+    await sendAndWait(walletClient, publicClient, tx);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("NotParamAuthorized")) {
+      const keys = fieldEntries.map(([key]) => key);
+      const detail = await describeAuthFailure(publicClient, contracts, tokenId, keys, walletClient.account.address);
+      throw new Error(`${err.message}\n${detail}`);
+    }
+    throw err;
+  }
+}
+
+/** Reads the on-chain auth requirement for each field a rejected write touched, so a
+ * `NotParamAuthorized` revert (otherwise just a bare selector with no context -- see this
+ * package's README) says WHICH auth level is actually required instead of leaving the caller to
+ * cross-reference `paramSchema` and ABX's AuthOption enum by hand. */
+async function describeAuthFailure(
+  client: PublicClient,
+  contracts: ContractAddresses,
+  tokenId: bigint,
+  keys: ProfileField[],
+  signer: Address,
+): Promise<string> {
+  const schemas = await Promise.all(
+    keys.map((key) => client.readContract({ address: contracts.abxToken, abi: seriesCodeAbi, functionName: "paramSchema", args: [encodeTag(key)] })),
+  );
+  const lines = keys.map((key, i) => `  - "${key}" requires ${authLabel(Number(schemas[i][2]))} auth`);
+  return (
+    `Required auth per field:\n${lines.join("\n")}\n` +
+    `"TokenOwner" means whoever currently owns token ${tokenId} (ownerOf, or a delegate.xyz v2 ` +
+    `delegation) -- not necessarily the signer (${signer}) that sent this transaction. If you ` +
+    `expected this to work, confirm that address actually owns token ${tokenId} right now.`
+  );
 }
 
 async function readField(client: PublicClient, contracts: ContractAddresses, tokenId: bigint, key: ProfileField): Promise<string> {
@@ -143,4 +175,64 @@ export async function getProfilesOf(client: PublicClient, contracts: ContractAdd
 
 export async function totalProfiles(client: PublicClient, contracts: ContractAddresses): Promise<bigint> {
   return client.readContract({ address: contracts.abxToken, abi: seriesCodeAbi, functionName: "totalSupply" });
+}
+
+export interface ProfileSummary {
+  tokenId: bigint;
+  displayName: string;
+  avatar: string;
+}
+
+/** The most recently minted profiles, newest first -- walks token ids backward from the latest
+ * mint (`nextTokenId() - 1`). No event-log scan, no indexer, no new contracts: just the fact that
+ * ABX mints ids sequentially. This is NOT search (no filtering by name/content) or trending (no
+ * ranking by activity) -- it's the one discovery primitive available without standing up an
+ * indexer.
+ *
+ * Reads sequentially rather than fanning out in parallel -- confirmed live while building this
+ * that a burst of ~6 concurrent `eth_call`s is enough to trip `mainnet.base.org`'s rate limit,
+ * which would otherwise silently truncate the result instead of raising (the exact "RPC failure
+ * masquerading as nothing to see" problem this package's README asks SDK users to guard against
+ * elsewhere -- this function shouldn't reproduce it internally). A genuine read failure throws
+ * here rather than being treated as "that id doesn't exist, skip it" -- CoinSpace profiles aren't
+ * burnable today, so every id below `nextTokenId()` is expected to resolve. */
+export async function getRecentProfiles(client: PublicClient, contracts: ContractAddresses, count = 20): Promise<ProfileSummary[]> {
+  const total = await totalProfiles(client, contracts);
+  if (total === 0n) return [];
+  const next = await client.readContract({ address: contracts.abxToken, abi: seriesCodeAbi, functionName: "nextTokenId" });
+  const latest = next - 1n;
+
+  const ids: bigint[] = [];
+  for (let id = latest; id >= 0n && ids.length < count; id--) ids.push(id);
+
+  const summaries: ProfileSummary[] = [];
+  for (const tokenId of ids) {
+    const identity = await getProfileIdentity(client, contracts, tokenId);
+    summaries.push({ tokenId, ...identity });
+  }
+  return summaries;
+}
+
+export type WallpaperMode = "tile" | "stretch" | "center" | "fit";
+
+const WALLPAPER_MODE_PREFIXES: readonly Exclude<WallpaperMode, "tile">[] = ["stretch", "center", "fit"];
+
+/** The `wallpaper` field's real wire format, undocumented on the type itself: a bare URL means
+ * "tiled" (the default -- every profile minted before modes existed already has one of these, so
+ * that format can never change), and a non-default mode rides as a plain string prefix
+ * (`"stretch|https://..."`, `"center|..."`, `"fit|..."`) rather than its own PostParam key. This
+ * mirrors coinspace.social's own `parseWallpaper`/`serializeWallpaper` exactly -- use these two
+ * helpers rather than hand-building the prefix, so a typo in the mode name can't silently produce
+ * a value the real app renders as a plain (always-tiled) URL. */
+export function parseWallpaper(raw: string): { url: string; mode: WallpaperMode } {
+  for (const mode of WALLPAPER_MODE_PREFIXES) {
+    const prefix = `${mode}|`;
+    if (raw.startsWith(prefix)) return { url: raw.slice(prefix.length), mode };
+  }
+  return { url: raw, mode: "tile" };
+}
+
+export function serializeWallpaper(url: string, mode: WallpaperMode): string {
+  if (!url || mode === "tile") return url;
+  return `${mode}|${url}`;
 }

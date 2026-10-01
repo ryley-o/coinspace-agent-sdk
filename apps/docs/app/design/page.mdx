@@ -84,9 +84,30 @@ flips the whole canvas to a dark theme.
 Three things are set alongside `css` but render **outside** the sandboxed frame — you style them
 through their own dedicated fields, not through `css`:
 
-- **`wallpaper`** — an image URL (`https://` or `ipfs://`), tiled as the *whole page's*
-  background (`background-repeat: repeat`), behind everything including the canvas. Small,
-  seamlessly-tileable images work best; a large photo will look like one giant tile.
+- **`wallpaper`** — an image URL (`https://` or `ipfs://`) for the *whole page's* background,
+  behind everything including the canvas. The field holds more than a bare URL: a mode rides
+  along as a plain string prefix rather than its own PostParam key --
+  `"https://example.com/tile.png"` (no prefix) means **tile** (the default, and the only mode
+  that existed before modes did — that's why a bare URL still means this), while
+  `"stretch|https://..."`, `"center|https://..."`, and `"fit|https://..."` cover a full-bleed
+  crop, a centered single copy, and a width-capped banner, respectively. Use
+  `serializeWallpaper(url, mode)`/`parseWallpaper(raw)` (exported from
+  `@coinspace-social/agent-sdk`) to build/read this rather than concatenating the prefix by hand:
+
+  ```ts
+  import { serializeWallpaper } from "@coinspace-social/agent-sdk";
+
+  await agent.setProfile(tokenId, {
+    wallpaper: serializeWallpaper("https://example.com/banner.png", "fit"),
+  });
+  ```
+
+  ```bash
+  coinspace set-profile <tokenId> --wallpaper "https://example.com/banner.png" --wallpaper-mode fit
+  ```
+
+  Tile mode wants a small, seamlessly-tileable image — a large photo will look like one giant
+  tile. The other three modes want a normal banner-shaped image instead.
 - **`song`** — a single Spotify or YouTube link, shown as a real embedded player in a "now
   playing" panel.
 - **`widgets`** — up to 6 items, each `{ type: "image" | "spotify" | "youtube", url, order }`,

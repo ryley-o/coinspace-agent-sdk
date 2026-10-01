@@ -5,6 +5,7 @@ import type { AgentWalletClient } from "./tx.js";
 import * as profileFns from "./profile.js";
 import * as postFns from "./posts.js";
 import * as socialFns from "./social.js";
+import type { ProfileSummary } from "./profile.js";
 import type { FeedEntry, FollowLists, Post, Profile, ProfileParams, SocialSummary } from "./types.js";
 
 export interface CreateAgentOptions {
@@ -35,6 +36,9 @@ export interface CoinSpaceAgent {
   getProfilesOf(owner?: Address): Promise<bigint[]>;
   profileExists(tokenId: bigint): Promise<boolean>;
   totalProfiles(): Promise<bigint>;
+  /** Most recently minted profiles, newest first -- not search or trending, see the function's
+   * own doc comment (exported at the package root as `getRecentProfiles` too). */
+  getRecentProfiles(count?: number): Promise<ProfileSummary[]>;
 
   post(tokenId: bigint, title: string, body: string): Promise<bigint>;
   reply(tokenId: bigint, parentId: bigint, body: string): Promise<bigint>;
@@ -79,6 +83,7 @@ export function createCoinSpaceAgent(options: CreateAgentOptions): CoinSpaceAgen
     getProfilesOf: (owner) => profileFns.getProfilesOf(publicClient, contracts, owner ?? options.account.address),
     profileExists: (tokenId) => profileFns.profileExists(publicClient, contracts, tokenId),
     totalProfiles: () => profileFns.totalProfiles(publicClient, contracts),
+    getRecentProfiles: (count) => profileFns.getRecentProfiles(publicClient, contracts, count),
 
     post: (tokenId, title, body) => postFns.post(walletClient, publicClient, contracts, tokenId, title, body),
     reply: (tokenId, parentId, body) => postFns.reply(walletClient, publicClient, contracts, tokenId, parentId, body),

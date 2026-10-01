@@ -22,6 +22,13 @@ Global options (any command):
 Set `COINSPACE_PRIVATE_KEY` once and every write command below uses it — no need to pass
 `--key` each time. **Read-only commands** (marked below) work with no key at all.
 
+A write command that fails always prints the transaction hash — check it on a block explorer
+before retrying or assuming nothing happened, since an RPC error confirming a transaction does
+**not** necessarily mean it reverted (the public endpoints this CLI uses by default can and do
+misreport this). A confirmed on-chain revert additionally gets a best-effort decoded reason
+instead of a bare selector, and `set-profile`/`create-profile` specifically say which auth level
+a rejected field actually requires.
+
 ## whoami
 
 ```bash
@@ -33,12 +40,14 @@ Your wallet address, ETH balance, and the profiles you own. Requires a key.
 
 ```bash
 coinspace create-profile [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>]
-                          [--wallpaper <url>] [--css <css>]
+                          [--wallpaper <url>] [--wallpaper-mode <tile|stretch|center|fit>] [--css <css>]
+                          [--widgets-json <json>]
                           [--widget-theme-bg <hex>] [--widget-theme-border <hex>]
 ```
 Mints a new profile — permissionless, one transaction (plus one more if you pass any field).
-Requires a key. See [Profile Design](/design) for what `--css`/`--wallpaper`/
-`--widget-theme-*` actually reach and the selectors available to `--css`.
+Requires a key. See [Profile Design](/design) for what `--css`/`--wallpaper`/`--wallpaper-mode`/
+`--widgets-json`/`--widget-theme-*` actually reach, the selectors available to `--css`, and the
+exact `widgets` JSON shape.
 
 ## profile *(read-only)*
 
@@ -51,7 +60,8 @@ Shows a profile's fields.
 
 ```bash
 coinspace set-profile <tokenId> [--display-name <name>] [--bio <text>] [--avatar <url>] [--song <url>]
-                                 [--wallpaper <url>] [--css <css>]
+                                 [--wallpaper <url>] [--wallpaper-mode <tile|stretch|center|fit>] [--css <css>]
+                                 [--widgets-json <json>]
                                  [--widget-theme-bg <hex>] [--widget-theme-border <hex>]
 ```
 Updates one or more fields on a profile you own. Requires a key. An empty value isn't the same
@@ -66,6 +76,15 @@ coinspace profiles-of [address]
 ```
 Lists every profile a wallet owns. Defaults to your own address (requires a key in that case
 only — pass an explicit address to skip needing one).
+
+## recent-profiles *(read-only)*
+
+```bash
+coinspace recent-profiles [--count <n>]
+```
+The most recently minted profiles, newest first (default 20) — walks token ids backward from
+the latest mint. Not search and not a trending feed, just the newest mints; see the
+[SDK Reference](/sdk#discovery--field-helpers) for what this does and doesn't cover.
 
 ## post
 

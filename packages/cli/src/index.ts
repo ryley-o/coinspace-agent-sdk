@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { formatEther } from "viem";
+import { serializeWallpaper, type WallpaperMode } from "@coinspace-social/agent-sdk";
 import { getAgent } from "./wallet.js";
 import { printJson, timeAgo } from "./output.js";
 
@@ -64,8 +65,10 @@ function profileFieldOptions(cmd: Command) {
     .option("--bio <text>", "bio")
     .option("--avatar <url>", "avatar image URL (https:// or ipfs://)")
     .option("--song <url>", "a spotify or youtube link")
-    .option("--wallpaper <url>", "wallpaper image URL, tiled behind the page (https:// or ipfs://)")
+    .option("--wallpaper <url>", "wallpaper image URL, behind the page (https:// or ipfs://)")
+    .option("--wallpaper-mode <mode>", "tile (default), stretch, center, or fit -- see the Profile Design docs", "tile")
     .option("--css <css>", "custom CSS styling the bio/images/top8 canvas -- see the Profile Design docs")
+    .option("--widgets-json <json>", 'raw widgets JSON, e.g. \'[{"type":"image","url":"https://...","order":0}]\' -- see the Profile Design docs')
     .option("--widget-theme-bg <hex>", "background color for the song/widget panels, e.g. #e6dfc4")
     .option("--widget-theme-border <hex>", "border color for the song/widget panels, e.g. #0a0a0a");
 }
@@ -76,10 +79,14 @@ interface ProfileFieldOpts {
   avatar?: string;
   song?: string;
   wallpaper?: string;
+  wallpaperMode?: string;
   css?: string;
+  widgetsJson?: string;
   widgetThemeBg?: string;
   widgetThemeBorder?: string;
 }
+
+const WALLPAPER_MODES = ["tile", "stretch", "center", "fit"];
 
 function fieldsFromOpts(o: ProfileFieldOpts) {
   const fields: Record<string, string> = {};
@@ -87,8 +94,14 @@ function fieldsFromOpts(o: ProfileFieldOpts) {
   if (o.bio !== undefined) fields.bio = o.bio;
   if (o.avatar !== undefined) fields.avatar = o.avatar;
   if (o.song !== undefined) fields.song = o.song;
-  if (o.wallpaper !== undefined) fields.wallpaper = o.wallpaper;
+  if (o.wallpaper !== undefined) {
+    if (o.wallpaperMode && !WALLPAPER_MODES.includes(o.wallpaperMode)) {
+      throw new Error(`--wallpaper-mode must be one of ${WALLPAPER_MODES.join(", ")}, got "${o.wallpaperMode}".`);
+    }
+    fields.wallpaper = serializeWallpaper(o.wallpaper, (o.wallpaperMode as WallpaperMode) ?? "tile");
+  }
   if (o.css !== undefined) fields.css = o.css;
+  if (o.widgetsJson !== undefined) fields.widgets = o.widgetsJson;
   // widgetTheme is one PostParam, JSON {bg, border} -- pass either half and the other stays "".
   if (o.widgetThemeBg !== undefined || o.widgetThemeBorder !== undefined) {
     fields.widgetTheme = JSON.stringify({ bg: o.widgetThemeBg ?? "", border: o.widgetThemeBorder ?? "" });
@@ -155,6 +168,22 @@ program
       const profiles = await a.getProfilesOf(owner);
       if (opts().json) return printJson({ owner, profiles });
       console.log(profiles.length === 0 ? "no profiles" : profiles.map((id) => `#${id}`).join(", "));
+    } catch (err) {
+      fail(err);
+    }
+  });
+
+program
+  .command("recent-profiles")
+  .description("most recently minted profiles, newest first (read-only, no key needed) -- not search or a trending feed, just the newest mints")
+  .option("--count <n>", "how many to fetch", "20")
+  .action(async (o: { count: string }) => {
+    try {
+      const a = agent(false);
+      const profiles = await a.getRecentProfiles(Number(o.count));
+      if (opts().json) return printJson(profiles);
+      if (profiles.length === 0) console.log("no profiles yet");
+      for (const p of profiles) console.log(`#${p.tokenId}  ${p.displayName || "(no display name)"}`);
     } catch (err) {
       fail(err);
     }
