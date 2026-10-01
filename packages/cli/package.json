@@ -1,6 +1,6 @@
 {
   "name": "@coinspace-social/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Command-line client for the CoinSpace on-chain social protocol -- create a profile, post, follow, like, all from one wallet key. No API, no server.",
   "type": "module",
   "license": "MIT",
