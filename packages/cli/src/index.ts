@@ -10,23 +10,29 @@ program
   .name("coinspace")
   .description(
     "CLI for the CoinSpace on-chain social protocol. Create a profile, post, reply, repost, " +
-      "like, follow -- all signed by your own wallet key, sent directly to Base Sepolia over " +
-      "RPC. No API, no server, nothing to authenticate with except your key.\n\n" +
+      "like, follow -- all signed by your own wallet key, sent directly to Base over RPC. No " +
+      "API, no server, nothing to authenticate with except your key.\n\n" +
+      "Runs against Base mainnet (CoinSpace's production deployment) by default -- pass " +
+      "--chain base-sepolia to use the testnet deployment instead.\n\n" +
       "Set COINSPACE_PRIVATE_KEY once (a 0x-prefixed private key) and every write command uses " +
       "it to sign. Read commands (profile, posts, feed, social) work without a key at all.",
   )
-  .version("0.1.0")
+  .version("0.2.0")
   .option("--key <hex>", "private key to sign with (overrides COINSPACE_PRIVATE_KEY)")
-  .option("--rpc-url <url>", "override the default public Base Sepolia RPC")
+  .option("--chain <chain>", "base (mainnet, default) or base-sepolia (testnet)", "base")
+  .option("--rpc-url <url>", "override the default public RPC for the selected chain")
   .option("--json", "print machine-readable JSON instead of formatted text");
 
 function opts() {
-  return program.opts<{ key?: string; rpcUrl?: string; json?: boolean }>();
+  return program.opts<{ key?: string; chain?: string; rpcUrl?: string; json?: boolean }>();
 }
 
 function agent(requireKey: boolean) {
   const o = opts();
-  return getAgent({ key: o.key, rpcUrl: o.rpcUrl }, { requireKey });
+  if (o.chain !== "base" && o.chain !== "base-sepolia") {
+    fail(new Error(`--chain must be "base" or "base-sepolia", got "${o.chain}".`));
+  }
+  return getAgent({ key: o.key, rpcUrl: o.rpcUrl, chain: o.chain as "base" | "base-sepolia" }, { requireKey });
 }
 
 function fail(err: unknown): never {
@@ -43,9 +49,9 @@ program
     try {
       const a = agent(true);
       const [balance, profiles] = await Promise.all([a.publicClient.getBalance({ address: a.address }), a.getProfilesOf()]);
-      if (opts().json) return printJson({ address: a.address, balanceEth: formatEther(balance), profiles });
+      if (opts().json) return printJson({ address: a.address, balanceEth: formatEther(balance), chain: a.publicClient.chain?.name, profiles });
       console.log(`address:  ${a.address}`);
-      console.log(`balance:  ${formatEther(balance)} ETH (Base Sepolia)`);
+      console.log(`balance:  ${formatEther(balance)} ETH (${a.publicClient.chain?.name})`);
       console.log(`profiles: ${profiles.length === 0 ? "none yet -- try `coinspace create-profile`" : profiles.join(", ")}`);
     } catch (err) {
       fail(err);
@@ -101,7 +107,7 @@ profileFieldOptions(
     if (opts().json) return printJson({ tokenId, profile });
     console.log(`created profile #${tokenId}`);
     if (profile.params.displayName) console.log(`display name: ${profile.params.displayName}`);
-    console.log(`view it (once the app is live) at /p/${tokenId}`);
+    if (a.publicClient.chain?.id === 8453) console.log(`view it at https://coinspace.social/p/${tokenId}`);
   } catch (err) {
     fail(err);
   }

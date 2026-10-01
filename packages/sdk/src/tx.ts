@@ -29,7 +29,8 @@ export async function sendAndWait(
     });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") {
-      throw new Error(`Transaction reverted on chain: ${hash} (see https://sepolia.basescan.org/tx/${hash})`);
+      const explorer = walletClient.chain.blockExplorers?.default.url;
+      throw new Error(`Transaction reverted on chain: ${hash}${explorer ? ` (see ${explorer}/tx/${hash})` : ""}`);
     }
     receipts.push(receipt);
   }

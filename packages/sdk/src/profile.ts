@@ -1,6 +1,6 @@
 import { type Address, type PublicClient, encodeTag, seriesCodeAbi } from "@artblocks/abx-sdk";
 import { BaseError, ContractFunctionRevertedError, encodeFunctionData, hexToString, parseEventLogs, stringToHex } from "viem";
-import { CONTRACTS } from "./chain.js";
+import type { ContractAddresses } from "./chain.js";
 import { hookAbi, minterAbi } from "./abi.js";
 import type { AgentWalletClient } from "./tx.js";
 import { sendAndWait, type TxCall } from "./tx.js";
@@ -10,8 +10,8 @@ export const BLANK_PROFILE_PARAMS: ProfileParams = Object.fromEntries(
   PROFILE_FIELDS.map((key) => [key, ""]),
 ) as ProfileParams;
 
-function buildCreateProfileTx(): TxCall {
-  return { to: CONTRACTS.minter, data: encodeFunctionData({ abi: minterAbi, functionName: "createProfile" }), value: 0n };
+function buildCreateProfileTx(contracts: ContractAddresses): TxCall {
+  return { to: contracts.minter, data: encodeFunctionData({ abi: minterAbi, functionName: "createProfile" }), value: 0n };
 }
 
 /** One PostParam write, batched with any others into a single `multicall` -- see `setProfile`.
@@ -31,18 +31,19 @@ function buildSetFieldCall(tokenId: bigint, key: ProfileField, value: string): `
 export async function createProfile(
   walletClient: AgentWalletClient,
   publicClient: PublicClient,
+  contracts: ContractAddresses,
   fields?: Partial<ProfileParams>,
 ): Promise<{ tokenId: bigint; profile: Profile }> {
-  const [mintReceipt] = await sendAndWait(walletClient, publicClient, buildCreateProfileTx());
+  const [mintReceipt] = await sendAndWait(walletClient, publicClient, buildCreateProfileTx(contracts));
   const minted = parseEventLogs({ abi: minterAbi, eventName: "ProfileMinted", logs: mintReceipt.logs });
   const tokenId = minted[0]?.args.tokenId;
   if (tokenId === undefined) throw new Error("Mint succeeded but no ProfileMinted event was found in the receipt.");
 
   if (fields && Object.keys(fields).length > 0) {
-    await setProfile(walletClient, publicClient, tokenId, fields);
+    await setProfile(walletClient, publicClient, contracts, tokenId, fields);
   }
 
-  return { tokenId, profile: await getProfile(publicClient, tokenId) };
+  return { tokenId, profile: await getProfile(publicClient, contracts, tokenId) };
 }
 
 /** Updates one or more of a profile's fields in a single transaction (the ABX token's own
@@ -51,6 +52,7 @@ export async function createProfile(
 export async function setProfile(
   walletClient: AgentWalletClient,
   publicClient: PublicClient,
+  contracts: ContractAddresses,
   tokenId: bigint,
   fields: Partial<ProfileParams>,
 ) {
@@ -66,16 +68,16 @@ export async function setProfile(
   if (calls.length === 0) return;
 
   const tx: TxCall = {
-    to: CONTRACTS.abxToken,
+    to: contracts.abxToken,
     data: encodeFunctionData({ abi: seriesCodeAbi, functionName: "multicall", args: [calls] }),
     value: 0n,
   };
   await sendAndWait(walletClient, publicClient, tx);
 }
 
-async function readField(client: PublicClient, tokenId: bigint, key: ProfileField): Promise<string> {
+async function readField(client: PublicClient, contracts: ContractAddresses, tokenId: bigint, key: ProfileField): Promise<string> {
   const tokenValue = await client.readContract({
-    address: CONTRACTS.abxToken,
+    address: contracts.abxToken,
     abi: seriesCodeAbi,
     functionName: "tokenParamData",
     args: [tokenId, encodeTag(key)],
@@ -85,27 +87,31 @@ async function readField(client: PublicClient, tokenId: bigint, key: ProfileFiel
 }
 
 /** Reads one profile straight from chain -- owner plus every field, no cache, no indexer. */
-export async function getProfile(client: PublicClient, tokenId: bigint): Promise<Profile> {
+export async function getProfile(client: PublicClient, contracts: ContractAddresses, tokenId: bigint): Promise<Profile> {
   const [owner, ...values] = await Promise.all([
-    client.readContract({ address: CONTRACTS.abxToken, abi: seriesCodeAbi, functionName: "ownerOf", args: [tokenId] }),
-    ...PROFILE_FIELDS.map((key) => readField(client, tokenId, key)),
+    client.readContract({ address: contracts.abxToken, abi: seriesCodeAbi, functionName: "ownerOf", args: [tokenId] }),
+    ...PROFILE_FIELDS.map((key) => readField(client, contracts, tokenId, key)),
   ]);
   const params = Object.fromEntries(PROFILE_FIELDS.map((key, i) => [key, values[i]])) as ProfileParams;
   return { tokenId, owner: owner as Address, params };
 }
 
 /** displayName + avatar only -- for rendering a byline without reading every field. */
-export async function getProfileIdentity(client: PublicClient, tokenId: bigint): Promise<{ displayName: string; avatar: string }> {
+export async function getProfileIdentity(
+  client: PublicClient,
+  contracts: ContractAddresses,
+  tokenId: bigint,
+): Promise<{ displayName: string; avatar: string }> {
   const [displayName, avatar] = await Promise.all([
-    readField(client, tokenId, "displayName"),
-    readField(client, tokenId, "avatar"),
+    readField(client, contracts, tokenId, "displayName"),
+    readField(client, contracts, tokenId, "avatar"),
   ]);
   return { displayName, avatar };
 }
 
-export async function profileExists(client: PublicClient, tokenId: bigint): Promise<boolean> {
+export async function profileExists(client: PublicClient, contracts: ContractAddresses, tokenId: bigint): Promise<boolean> {
   try {
-    await client.readContract({ address: CONTRACTS.abxToken, abi: seriesCodeAbi, functionName: "ownerOf", args: [tokenId] });
+    await client.readContract({ address: contracts.abxToken, abi: seriesCodeAbi, functionName: "ownerOf", args: [tokenId] });
     return true;
   } catch (err) {
     if (err instanceof BaseError && err.walk((e) => e instanceof ContractFunctionRevertedError)) return false;
@@ -118,14 +124,14 @@ const PROFILES_PAGE_SIZE = 25n;
 /** Every profile a wallet owns, fully enumerated on chain (never event-log scanning) -- fans out
  * one bounded page per 25 profiles in parallel, so a wallet holding hundreds still resolves in
  * one round trip's worth of latency. */
-export async function getProfilesOf(client: PublicClient, owner: Address): Promise<bigint[]> {
-  const count = await client.readContract({ address: CONTRACTS.hook, abi: hookAbi, functionName: "profileCountOf", args: [owner] });
+export async function getProfilesOf(client: PublicClient, contracts: ContractAddresses, owner: Address): Promise<bigint[]> {
+  const count = await client.readContract({ address: contracts.hook, abi: hookAbi, functionName: "profileCountOf", args: [owner] });
   if (count === 0n) return [];
   const pageCount = Number((count + PROFILES_PAGE_SIZE - 1n) / PROFILES_PAGE_SIZE);
   const pages = await Promise.all(
     Array.from({ length: pageCount }, (_, i) =>
       client.readContract({
-        address: CONTRACTS.hook,
+        address: contracts.hook,
         abi: hookAbi,
         functionName: "profilesOf",
         args: [owner, BigInt(i) * PROFILES_PAGE_SIZE, PROFILES_PAGE_SIZE],
@@ -135,6 +141,6 @@ export async function getProfilesOf(client: PublicClient, owner: Address): Promi
   return pages.flatMap((page) => [...page]);
 }
 
-export async function totalProfiles(client: PublicClient): Promise<bigint> {
-  return client.readContract({ address: CONTRACTS.abxToken, abi: seriesCodeAbi, functionName: "totalSupply" });
+export async function totalProfiles(client: PublicClient, contracts: ContractAddresses): Promise<bigint> {
+  return client.readContract({ address: contracts.abxToken, abi: seriesCodeAbi, functionName: "totalSupply" });
 }

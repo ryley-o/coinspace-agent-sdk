@@ -1,5 +1,5 @@
 import { type PublicClient, encodeFunctionData } from "viem";
-import { CONTRACTS } from "./chain.js";
+import type { ContractAddresses } from "./chain.js";
 import { socialAbi } from "./abi.js";
 import type { AgentWalletClient } from "./tx.js";
 import { sendAndWait, type TxCall } from "./tx.js";
@@ -9,30 +9,55 @@ import type { FeedEntry, FollowLists, SocialSummary } from "./types.js";
 
 const MAX_SAMPLE = 25;
 
-export async function follow(walletClient: AgentWalletClient, publicClient: PublicClient, fromTokenId: bigint, toTokenId: bigint) {
-  const tx: TxCall = { to: CONTRACTS.social, data: encodeFunctionData({ abi: socialAbi, functionName: "follow", args: [fromTokenId, toTokenId] }), value: 0n };
+export async function follow(
+  walletClient: AgentWalletClient,
+  publicClient: PublicClient,
+  contracts: ContractAddresses,
+  fromTokenId: bigint,
+  toTokenId: bigint,
+) {
+  const tx: TxCall = {
+    to: contracts.social,
+    data: encodeFunctionData({ abi: socialAbi, functionName: "follow", args: [fromTokenId, toTokenId] }),
+    value: 0n,
+  };
   await sendAndWait(walletClient, publicClient, tx);
 }
 
-export async function unfollow(walletClient: AgentWalletClient, publicClient: PublicClient, fromTokenId: bigint, toTokenId: bigint) {
-  const tx: TxCall = { to: CONTRACTS.social, data: encodeFunctionData({ abi: socialAbi, functionName: "unfollow", args: [fromTokenId, toTokenId] }), value: 0n };
+export async function unfollow(
+  walletClient: AgentWalletClient,
+  publicClient: PublicClient,
+  contracts: ContractAddresses,
+  fromTokenId: bigint,
+  toTokenId: bigint,
+) {
+  const tx: TxCall = {
+    to: contracts.social,
+    data: encodeFunctionData({ abi: socialAbi, functionName: "unfollow", args: [fromTokenId, toTokenId] }),
+    value: 0n,
+  };
   await sendAndWait(walletClient, publicClient, tx);
 }
 
-export async function isFollowing(client: PublicClient, fromTokenId: bigint, toTokenId: bigint): Promise<boolean> {
-  return client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "isFollowing", args: [fromTokenId, toTokenId] });
+export async function isFollowing(
+  client: PublicClient,
+  contracts: ContractAddresses,
+  fromTokenId: bigint,
+  toTokenId: bigint,
+): Promise<boolean> {
+  return client.readContract({ address: contracts.social, abi: socialAbi, functionName: "isFollowing", args: [fromTokenId, toTokenId] });
 }
 
 /** One profile's follow-graph summary: three counts (O(1) each, cheap regardless of graph size)
  * plus one bounded 25-item sample of each list. */
-export async function getSocialSummary(client: PublicClient, tokenId: bigint): Promise<SocialSummary> {
+export async function getSocialSummary(client: PublicClient, contracts: ContractAddresses, tokenId: bigint): Promise<SocialSummary> {
   const [followers, following, friends, followerCount, followingCount, friendCount] = await Promise.all([
-    client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "getFollowers", args: [tokenId, 0n, BigInt(MAX_SAMPLE)] }),
-    client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "getFollowing", args: [tokenId, 0n, BigInt(MAX_SAMPLE)] }),
-    client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "getFriends", args: [tokenId, 0n, BigInt(MAX_SAMPLE)] }),
-    client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "followerCount", args: [tokenId] }),
-    client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "followingCount", args: [tokenId] }),
-    client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName: "friendCount", args: [tokenId] }),
+    client.readContract({ address: contracts.social, abi: socialAbi, functionName: "getFollowers", args: [tokenId, 0n, BigInt(MAX_SAMPLE)] }),
+    client.readContract({ address: contracts.social, abi: socialAbi, functionName: "getFollowing", args: [tokenId, 0n, BigInt(MAX_SAMPLE)] }),
+    client.readContract({ address: contracts.social, abi: socialAbi, functionName: "getFriends", args: [tokenId, 0n, BigInt(MAX_SAMPLE)] }),
+    client.readContract({ address: contracts.social, abi: socialAbi, functionName: "followerCount", args: [tokenId] }),
+    client.readContract({ address: contracts.social, abi: socialAbi, functionName: "followingCount", args: [tokenId] }),
+    client.readContract({ address: contracts.social, abi: socialAbi, functionName: "friendCount", args: [tokenId] }),
   ]);
   return {
     followers: [...followers],
@@ -50,13 +75,14 @@ export async function getSocialSummary(client: PublicClient, tokenId: bigint): P
  * per call on chain regardless of `limit`. */
 export async function getMoreFollowList(
   client: PublicClient,
+  contracts: ContractAddresses,
   tokenId: bigint,
   key: keyof FollowLists,
   offset: number,
   limit = MAX_SAMPLE,
 ): Promise<bigint[]> {
   const functionName = key === "followers" ? "getFollowers" : key === "following" ? "getFollowing" : "getFriends";
-  const page = await client.readContract({ address: CONTRACTS.social, abi: socialAbi, functionName, args: [tokenId, BigInt(offset), BigInt(limit)] });
+  const page = await client.readContract({ address: contracts.social, abi: socialAbi, functionName, args: [tokenId, BigInt(offset), BigInt(limit)] });
   return [...page];
 }
 
@@ -80,15 +106,15 @@ function feedScore(post: FeedEntry["post"], nowSeconds: number): number {
  * excluded -- this is top-level posts and reposts, matching what a "timeline" means everywhere
  * else. Fine for the network sizes CoinSpace runs at today; a wallet following thousands of
  * profiles would want a write-time fan-out instead of scaling this function up. */
-export async function getFeed(client: PublicClient, viewerTokenId: bigint): Promise<FeedEntry[]> {
-  const { following } = await getSocialSummary(client, viewerTokenId);
+export async function getFeed(client: PublicClient, contracts: ContractAddresses, viewerTokenId: bigint): Promise<FeedEntry[]> {
+  const { following } = await getSocialSummary(client, contracts, viewerTokenId);
   if (following.length === 0) return [];
 
   const perAuthor = await Promise.all(
     following.map(async (authorTokenId): Promise<FeedEntry[]> => {
       const [identity, { posts }] = await Promise.all([
-        getProfileIdentity(client, authorTokenId),
-        getPosts(client, authorTokenId, FEED_POSTS_PER_AUTHOR),
+        getProfileIdentity(client, contracts, authorTokenId),
+        getPosts(client, contracts, authorTokenId, FEED_POSTS_PER_AUTHOR),
       ]);
       return posts
         .filter((post) => post.parentId === 0n)

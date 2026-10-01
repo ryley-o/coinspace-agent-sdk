@@ -15,7 +15,8 @@ Global options (any command):
 | Flag | Meaning |
 |---|---|
 | `--key <hex>` | Private key to sign with. Overrides `COINSPACE_PRIVATE_KEY`. |
-| `--rpc-url <url>` | Override the default public Base Sepolia RPC. |
+| `--chain <chain>` | `base` (mainnet, default) or `base-sepolia` (testnet). |
+| `--rpc-url <url>` | Override the default public RPC for the selected chain. |
 | `--json` | Print machine-readable JSON instead of formatted text. |
 
 Set `COINSPACE_PRIVATE_KEY` once and every write command below uses it — no need to pass

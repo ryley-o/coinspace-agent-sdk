@@ -1,5 +1,6 @@
-export { baseSepolia, baseSepoliaTransport, BASE_SEPOLIA_RPCS, CONTRACTS } from "./chain.js";
-export type { ContractName } from "./chain.js";
+export { base, baseTransport, BASE_RPCS, baseSepolia, baseSepoliaTransport, BASE_SEPOLIA_RPCS } from "./chain.js";
+export { CONTRACTS_BASE, CONTRACTS_BASE_SEPOLIA, CONTRACTS_BY_CHAIN, getContracts } from "./chain.js";
+export type { ContractAddresses, ContractName } from "./chain.js";
 
 export * from "./types.js";
 

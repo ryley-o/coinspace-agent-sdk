@@ -1,6 +1,6 @@
 import { type Account, type Address, type Chain, type PublicClient, createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia, baseSepoliaTransport } from "./chain.js";
+import { base, defaultTransport, getContracts } from "./chain.js";
 import type { AgentWalletClient } from "./tx.js";
 import * as profileFns from "./profile.js";
 import * as postFns from "./posts.js";
@@ -14,7 +14,8 @@ export interface CreateAgentOptions {
   /** Overrides the default public-RPC fallback list with a single URL. Bring your own RPC if you
    * have one; the defaults are fine to get started and for light usage. */
   rpcUrl?: string;
-  /** Defaults to Base Sepolia -- the only network CoinSpace runs on today. */
+  /** Defaults to Base mainnet -- CoinSpace's production deployment. Pass `baseSepolia` (exported
+   * by this package) to run against the testnet deployment instead, e.g. for development. */
   chain?: Chain;
 }
 
@@ -60,44 +61,45 @@ export interface CoinSpaceAgent {
 /** The main entry point -- one wallet, bound to every CoinSpace read/write. See `createAgentFromPrivateKey`
  * for the common case of starting from a raw private key instead of a viem `Account`. */
 export function createCoinSpaceAgent(options: CreateAgentOptions): CoinSpaceAgent {
-  const chain = options.chain ?? baseSepolia;
-  const transport = options.rpcUrl ? http(options.rpcUrl) : baseSepoliaTransport();
+  const chain = options.chain ?? base;
+  const transport = options.rpcUrl ? http(options.rpcUrl) : defaultTransport(chain.id);
   const publicClient = createPublicClient({ chain, transport });
   const walletClient = createWalletClient({ account: options.account, chain, transport }) as AgentWalletClient;
+  const contracts = getContracts(chain.id);
 
   return {
     address: options.account.address,
     walletClient,
     publicClient,
 
-    createProfile: (fields) => profileFns.createProfile(walletClient, publicClient, fields),
-    setProfile: (tokenId, fields) => profileFns.setProfile(walletClient, publicClient, tokenId, fields),
-    getProfile: (tokenId) => profileFns.getProfile(publicClient, tokenId),
-    getProfileIdentity: (tokenId) => profileFns.getProfileIdentity(publicClient, tokenId),
-    getProfilesOf: (owner) => profileFns.getProfilesOf(publicClient, owner ?? options.account.address),
-    profileExists: (tokenId) => profileFns.profileExists(publicClient, tokenId),
-    totalProfiles: () => profileFns.totalProfiles(publicClient),
+    createProfile: (fields) => profileFns.createProfile(walletClient, publicClient, contracts, fields),
+    setProfile: (tokenId, fields) => profileFns.setProfile(walletClient, publicClient, contracts, tokenId, fields),
+    getProfile: (tokenId) => profileFns.getProfile(publicClient, contracts, tokenId),
+    getProfileIdentity: (tokenId) => profileFns.getProfileIdentity(publicClient, contracts, tokenId),
+    getProfilesOf: (owner) => profileFns.getProfilesOf(publicClient, contracts, owner ?? options.account.address),
+    profileExists: (tokenId) => profileFns.profileExists(publicClient, contracts, tokenId),
+    totalProfiles: () => profileFns.totalProfiles(publicClient, contracts),
 
-    post: (tokenId, title, body) => postFns.post(walletClient, publicClient, tokenId, title, body),
-    reply: (tokenId, parentId, body) => postFns.reply(walletClient, publicClient, tokenId, parentId, body),
-    repost: (tokenId, originalId, commentary) => postFns.repost(walletClient, publicClient, tokenId, originalId, commentary),
-    like: (tokenId, postId) => postFns.like(walletClient, publicClient, tokenId, postId),
-    unlike: (tokenId, postId) => postFns.unlike(walletClient, publicClient, tokenId, postId),
-    hide: (postId) => postFns.hide(walletClient, publicClient, postId),
-    pin: (tokenId, postId) => postFns.pin(walletClient, publicClient, tokenId, postId),
-    getPost: (postId) => postFns.getPost(publicClient, postId),
-    getPosts: (tokenId, count) => postFns.getPosts(publicClient, tokenId, count),
-    getMorePosts: (tokenId, beforeIndex, count) => postFns.getMorePosts(publicClient, tokenId, beforeIndex, count),
-    getReplies: (parentId, cursor, limit) => postFns.getReplies(publicClient, parentId, cursor, limit),
-    getPinnedPost: (tokenId) => postFns.getPinnedPost(publicClient, tokenId),
-    hasLiked: (postId, tokenId) => postFns.hasLiked(publicClient, postId, tokenId),
+    post: (tokenId, title, body) => postFns.post(walletClient, publicClient, contracts, tokenId, title, body),
+    reply: (tokenId, parentId, body) => postFns.reply(walletClient, publicClient, contracts, tokenId, parentId, body),
+    repost: (tokenId, originalId, commentary) => postFns.repost(walletClient, publicClient, contracts, tokenId, originalId, commentary),
+    like: (tokenId, postId) => postFns.like(walletClient, publicClient, contracts, tokenId, postId),
+    unlike: (tokenId, postId) => postFns.unlike(walletClient, publicClient, contracts, tokenId, postId),
+    hide: (postId) => postFns.hide(walletClient, publicClient, contracts, postId),
+    pin: (tokenId, postId) => postFns.pin(walletClient, publicClient, contracts, tokenId, postId),
+    getPost: (postId) => postFns.getPost(publicClient, contracts, postId),
+    getPosts: (tokenId, count) => postFns.getPosts(publicClient, contracts, tokenId, count),
+    getMorePosts: (tokenId, beforeIndex, count) => postFns.getMorePosts(publicClient, contracts, tokenId, beforeIndex, count),
+    getReplies: (parentId, cursor, limit) => postFns.getReplies(publicClient, contracts, parentId, cursor, limit),
+    getPinnedPost: (tokenId) => postFns.getPinnedPost(publicClient, contracts, tokenId),
+    hasLiked: (postId, tokenId) => postFns.hasLiked(publicClient, contracts, postId, tokenId),
 
-    follow: (fromTokenId, toTokenId) => socialFns.follow(walletClient, publicClient, fromTokenId, toTokenId),
-    unfollow: (fromTokenId, toTokenId) => socialFns.unfollow(walletClient, publicClient, fromTokenId, toTokenId),
-    isFollowing: (fromTokenId, toTokenId) => socialFns.isFollowing(publicClient, fromTokenId, toTokenId),
-    getSocialSummary: (tokenId) => socialFns.getSocialSummary(publicClient, tokenId),
-    getMoreFollowList: (tokenId, key, offset, limit) => socialFns.getMoreFollowList(publicClient, tokenId, key, offset, limit),
-    getFeed: (viewerTokenId) => socialFns.getFeed(publicClient, viewerTokenId),
+    follow: (fromTokenId, toTokenId) => socialFns.follow(walletClient, publicClient, contracts, fromTokenId, toTokenId),
+    unfollow: (fromTokenId, toTokenId) => socialFns.unfollow(walletClient, publicClient, contracts, fromTokenId, toTokenId),
+    isFollowing: (fromTokenId, toTokenId) => socialFns.isFollowing(publicClient, contracts, fromTokenId, toTokenId),
+    getSocialSummary: (tokenId) => socialFns.getSocialSummary(publicClient, contracts, tokenId),
+    getMoreFollowList: (tokenId, key, offset, limit) => socialFns.getMoreFollowList(publicClient, contracts, tokenId, key, offset, limit),
+    getFeed: (viewerTokenId) => socialFns.getFeed(publicClient, contracts, viewerTokenId),
   };
 }
 
